@@ -1,0 +1,59 @@
+version: "3.9"
+
+networks:
+  testnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
+
+services:
+
+  server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: redes2_server
+    networks:
+      testnet:
+        ipv4_address: 172.28.0.10
+    ports:
+      - "5001:5001"
+      - "5002:5002/udp"
+    volumes:
+      - ../logs:/app/logs
+      - ../received:/app/received
+    cap_add:
+      - NET_ADMIN
+    command: python3 server.py both
+
+  client:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: redes2_client
+    networks:
+      testnet:
+        ipv4_address: 172.28.0.20
+    depends_on:
+      - server
+    volumes:
+      - ../logs:/app/logs
+      - ../testfile:/app/testfile
+    cap_add:
+      - NET_ADMIN
+    command: tail -f /dev/null   # manter vivo para execução manual
+
+  analyzer:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: redes2_analyzer
+    networks:
+      - testnet
+    volumes:
+      - ../logs:/app/logs
+      - ../analysis:/app/analysis
+    command: python3 analyze.py logs/results.csv
+    profiles:
+      - analyze
